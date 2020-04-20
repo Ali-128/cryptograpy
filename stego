@@ -1,0 +1,94 @@
+#!/bin/python3
+import sys
+from PIL import Image
+#()10 ------> ()2
+def dec2bin(n, ans=''):
+	if n == 0:
+		return ans
+	return dec2bin(n//2, str(n % 2) + ans)
+#()2 ------> ()10
+def bin2dec(n, depth=0, ans=0):
+	if depth == len(n):
+		return str(ans)
+	return bin2dec(n, depth + 1, ans + int(2 ** depth) * int(n[-depth - 1]))
+#(string) ------> (binary)
+def str2bin(message, code = ''):
+	for i in message:
+		code += dec2bin(ord(i), '').zfill(8)
+	return code
+#(binary) ------> (string)
+def bin2str(binMassge):
+	return chr(int(bin2dec(binMassge, 0, 0)))
+def setLSB(number, bit):
+	if bit == 0:
+		if number % 2 == 0:
+			return number
+		return number - 1
+	else:
+		if number % 2== 0:
+			return number + 1
+		return number
+def encode(message, pix, width, height):
+	code = str2bin(message)
+	point = 0
+	while point < len(code):
+		i = point % width
+		j = point // width
+		temp = list(pix[i,j])
+		temp[point % 3] = setLSB(temp[point % 3], int(code[point]))
+		pix[i, j] = tuple(temp)
+		point += 1
+	# key
+	# n8b :  num of 8bits
+	length = len(dec2bin(width * height // 8))
+	n8b = dec2bin(point // 8).zfill(length)
+	counter = 0
+	point = height * width - 1
+	while counter < length:
+		i = point % width
+		j = point // width
+		temp = list(pix[i,j])
+		temp[point % 3] = setLSB(temp[point % 3], int(n8b[counter]))
+		pix[i, j] = tuple(temp)
+		counter += 1
+		point -= 1
+	print('completed!')
+def decode(pix,width,height):
+	temp = ''
+	counter = 0
+	point = height * width - 1
+	while counter < len(dec2bin(width * height // 8)):
+		i = point % width
+		j = point // width
+		temp += dec2bin(pix[i,j][point % 3])[-1]
+		counter += 1
+		point -= 1
+	# nb : num of bits
+	nb = 8 * int(bin2dec(temp))
+	coded_message = ''
+	point = 0
+	while point <nb:
+		i = point%width
+		j = point//width
+		coded_message += str2bin(str(pix[i,j][point % 3]))[-1]
+		point += 1
+	temp = ''
+	message = ''
+	for i in coded_message:
+		temp += i
+		if(len(temp) == 8):
+			message += bin2str(temp)
+			temp = ''
+	return message
+def main(args):
+	option = args[1]
+	image = Image.open(args[2])
+	pix = image.load()
+	if option == '-e':
+		print('Enter your message:')
+		encode(sys.stdin.read(), pix,image.size[0], image.size[1])
+		image.save('coded_image.png')
+	elif option == '-d':
+		print(decode(pix, image.size[0], image.size[1]))
+if __name__ == '__main__':
+	main(sys.argv)
